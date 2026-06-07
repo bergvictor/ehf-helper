@@ -1,0 +1,22 @@
+{
+  "name": "ehf-helper",
+  "version": "0.1.0",
+  "description": "Zero-dependency helper that turns a simple invoice JSON into Peppol BIS Billing 3.0 (EN 16931 / EHF) UBL XML.",
+  "type": "module",
+  "main": "src/ehf.js",
+  "exports": "./src/ehf.js",
+  "scripts": {
+    "test": "node --test"
+  },
+  "keywords": ["ehf", "peppol", "bis", "en16931", "ubl", "invoice", "faktura", "norway", "saf-t"],
+  "author": "Victor Berg <victor.berg@vimplement.com> (https://www.vimplement.com)",
+  "license": "MIT",
+  "homepage": "https://www.vimplement.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bergvictor/ehf-helper.git"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
