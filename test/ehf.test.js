@@ -6,6 +6,7 @@ const sample = {
   invoiceNumber: '2026-001',
   issueDate: '2026-06-07',
   dueDate: '2026-06-21',
+  buyerReference: 'PO-2026-0042',
   currency: 'NOK',
   supplier: {
     name: 'VImplement',
@@ -66,7 +67,38 @@ test('escapes XML special characters', () => {
   assert.match(xml, /A &amp; B &lt;test&gt;/);
 });
 
+test('emits the buyer reference (BT-10)', () => {
+  const xml = buildInvoice(sample);
+  assert.match(xml, /<cbc:BuyerReference>PO-2026-0042<\/cbc:BuyerReference>/);
+});
+
+test('emits PaymentMeans with account and Norwegian KID', () => {
+  const inv = {
+    ...sample,
+    payment: { account: '86011117947', kid: '0123456789012', accountName: 'VImplement', bic: 'SPSONO22' },
+  };
+  const xml = buildInvoice(inv);
+  assert.match(xml, /<cbc:PaymentMeansCode>30<\/cbc:PaymentMeansCode>/);
+  assert.match(xml, /<cbc:PaymentID>0123456789012<\/cbc:PaymentID>/);
+  assert.match(xml, /<cac:PayeeFinancialAccount>\s*<cbc:ID>86011117947<\/cbc:ID>\s*<cbc:Name>VImplement<\/cbc:Name>/);
+  assert.match(xml, /<cac:FinancialInstitutionBranch><cbc:ID>SPSONO22<\/cbc:ID><\/cac:FinancialInstitutionBranch>/);
+});
+
+test('PaymentMeans honours an explicit means code and stays optional', () => {
+  const inv = { ...sample, payment: { account: 'NO9386011117947', meansCode: 58 } };
+  const xml = buildInvoice(inv);
+  assert.match(xml, /<cbc:PaymentMeansCode>58<\/cbc:PaymentMeansCode>/);
+  assert.doesNotMatch(xml, /<cbc:PaymentID>/);
+  // no payment info given -> no PaymentMeans block
+  assert.doesNotMatch(buildInvoice(sample), /<cac:PaymentMeans>/);
+});
+
 test('rejects invalid input', () => {
   assert.throws(() => buildInvoice({ lines: [] }), /invoiceNumber/);
-  assert.throws(() => buildInvoice({ invoiceNumber: 'x', issueDate: '2026-01-01', lines: [] }), /at least one line/);
+  assert.throws(() => buildInvoice({ invoiceNumber: 'x', issueDate: '2026-01-01', lines: [] }), /buyerReference/);
+  assert.throws(
+    () => buildInvoice({ invoiceNumber: 'x', issueDate: '2026-01-01', buyerReference: 'ref', lines: [] }),
+    /at least one line/
+  );
+  assert.throws(() => buildInvoice({ ...sample, payment: { kid: '123' } }), /payment requires account/);
 });

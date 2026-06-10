@@ -26,14 +26,23 @@
  * @property {number} vatPercent  e.g. 25, 15, 12, 0
  * @property {string} [unitCode]  UN/ECE Rec 20 code (default "EA")
  *
+ * @typedef {Object} Payment
+ * @property {string} account          Payee account number (Norwegian BBAN or IBAN)
+ * @property {string|number} [meansCode] UN/ECE 4461 payment means code (default "30", credit transfer)
+ * @property {string} [kid]            Norwegian KID / remittance reference (emitted as cbc:PaymentID)
+ * @property {string} [accountName]    Account holder name
+ * @property {string} [bic]            BIC/SWIFT of the payee's bank
+ *
  * @typedef {Object} Invoice
  * @property {string} invoiceNumber
  * @property {string} issueDate   ISO date "YYYY-MM-DD"
+ * @property {string} buyerReference Buyer's reference (BT-10) — required by Peppol BIS 3.0
  * @property {string} [dueDate]   ISO date "YYYY-MM-DD"
  * @property {string} [currency]  default "NOK"
  * @property {string} [note]
  * @property {Party} supplier
  * @property {Party} customer
+ * @property {Payment} [payment]  Emitted as cac:PaymentMeans when present
  * @property {Line[]} lines
  */
 
@@ -92,6 +101,25 @@ function partyXml(p) {
   );
 }
 
+function paymentMeansXml(p) {
+  if (!p) return '';
+  if (!p.account) throw new Error('payment requires account');
+  const code = p.meansCode == null ? '30' : String(p.meansCode);
+  return (
+    '  <cac:PaymentMeans>\n' +
+    `    <cbc:PaymentMeansCode>${esc(code)}</cbc:PaymentMeansCode>\n` +
+    (p.kid ? `    <cbc:PaymentID>${esc(p.kid)}</cbc:PaymentID>\n` : '') +
+    '    <cac:PayeeFinancialAccount>\n' +
+    `      <cbc:ID>${esc(p.account)}</cbc:ID>\n` +
+    (p.accountName ? `      <cbc:Name>${esc(p.accountName)}</cbc:Name>\n` : '') +
+    (p.bic
+      ? `      <cac:FinancialInstitutionBranch><cbc:ID>${esc(p.bic)}</cbc:ID></cac:FinancialInstitutionBranch>\n`
+      : '') +
+    '    </cac:PayeeFinancialAccount>\n' +
+    '  </cac:PaymentMeans>\n'
+  );
+}
+
 /**
  * Compute monetary totals for an invoice (ex VAT, VAT, inc VAT) plus the
  * per-rate VAT breakdown. Useful on its own for dashboards/checks.
@@ -132,6 +160,9 @@ export function summarize(inv) {
 export function buildInvoice(inv) {
   if (!inv || !inv.invoiceNumber) throw new Error('invoiceNumber is required');
   if (!inv.issueDate) throw new Error('issueDate is required');
+  if (!inv.buyerReference) {
+    throw new Error('buyerReference is required (BT-10, Peppol BIS 3.0 rule PEPPOL-EN16931-R003)');
+  }
   const currency = inv.currency || 'NOK';
   const { net, vat, gross, breakdown, lines } = summarize(inv);
 
@@ -186,8 +217,10 @@ export function buildInvoice(inv) {
     '  <cbc:InvoiceTypeCode>380</cbc:InvoiceTypeCode>\n' +
     (inv.note ? `  <cbc:Note>${esc(inv.note)}</cbc:Note>\n` : '') +
     `  <cbc:DocumentCurrencyCode>${currency}</cbc:DocumentCurrencyCode>\n` +
+    `  <cbc:BuyerReference>${esc(inv.buyerReference)}</cbc:BuyerReference>\n` +
     `  <cac:AccountingSupplierParty>${partyXml(inv.supplier)}\n  </cac:AccountingSupplierParty>\n` +
     `  <cac:AccountingCustomerParty>${partyXml(inv.customer)}\n  </cac:AccountingCustomerParty>\n` +
+    paymentMeansXml(inv.payment) +
     '  <cac:TaxTotal>\n' +
     `    <cbc:TaxAmount currencyID="${currency}">${money(vat)}</cbc:TaxAmount>` +
     subtotalsXml +

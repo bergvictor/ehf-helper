@@ -31,6 +31,7 @@ const invoice = {
   invoiceNumber: '2026-001',
   issueDate: '2026-06-07',
   dueDate: '2026-06-21',
+  buyerReference: 'PO-2026-0042', // BT-10 — required by Peppol BIS 3.0
   currency: 'NOK',
   supplier: {
     name: 'VImplement',
@@ -42,6 +43,11 @@ const invoice = {
     name: 'Kunde AS',
     orgNo: '999888777',
     address: { city: 'Bergen', postalZone: '5003', country: 'NO' },
+  },
+  payment: {
+    account: '86011117947',  // payee account (BBAN or IBAN)
+    meansCode: 30,           // UN/ECE 4461 (default 30, credit transfer)
+    kid: '0123456789012',    // Norwegian KID → cbc:PaymentID
   },
   lines: [
     { name: 'Power BI dashboard', quantity: 1, unitPrice: 20000, vatPercent: 25 },
@@ -56,7 +62,9 @@ const xml = buildInvoice(invoice); // full UBL Invoice XML string
 ## What it covers
 
 - BIS Billing 3.0 `CustomizationID` / `ProfileID`
+- `cbc:BuyerReference` (BT-10) — required input, per Peppol rule PEPPOL-EN16931-R003
 - Supplier + customer parties with the Norwegian org-number endpoint scheme (`0192`)
+- `cac:PaymentMeans` with payee account, optional BIC, and Norwegian KID (`cbc:PaymentID`)
 - Invoice lines with per-line VAT category
 - Per-rate `TaxSubtotal`s and a reconciled `TaxTotal` / `LegalMonetaryTotal`
 - Standard (`S`), reduced, and zero-rated (`Z`) VAT; single document currency
