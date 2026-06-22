@@ -2,4 +2,22 @@ node_modules/
 *.log
 .DS_Store
 dist/
+build/
+.next/
 .vercel
+
+# Secrets / local environment
+.env
+.env.*.local
+.env.production
+.env.local
+
+# Claude Code local settings (may contain user paths or tokens)
+.claude/settings.local.json
+
+# Python artefacts (if tooling is ever added)
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
