@@ -5,10 +5,12 @@
   "type": "module",
   "main": "src/ehf.js",
   "exports": "./src/ehf.js",
+  "sideEffects": false,
+  "files": ["src", "README.md", "LICENSE"],
   "scripts": {
     "test": "node --test"
   },
-  "keywords": ["ehf", "peppol", "bis", "en16931", "ubl", "invoice", "faktura", "norway", "saf-t"],
+  "keywords": ["ehf", "peppol", "bis", "en16931", "ubl", "invoice", "einvoice", "faktura", "norway"],
   "author": "Victor Berg <victor.berg@vimplement.com> (https://www.vimplement.com)",
   "license": "MIT",
   "homepage": "https://www.vimplement.com",

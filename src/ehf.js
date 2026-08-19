@@ -16,7 +16,7 @@
  * @typedef {Object} Party
  * @property {string} name        Registered legal name
  * @property {string} orgNo       Organisation number (Enhetsregisteret, scheme 0192)
- * @property {string} [vatNo]     e.g. "NO934134176MVA"
+ * @property {string} [vatNo]     e.g. "NO987654321MVA" (omit when the issuer is not VAT-registered)
  * @property {Address} [address]
  *
  * @typedef {Object} Line
@@ -53,12 +53,20 @@ const NS =
 
 const ORG_SCHEME = '0192'; // Norwegian organisation number
 
+// C0 controls (except tab/LF/CR), DEL, C1 controls, and lone (unpaired) surrogates
+// are all invalid in XML 1.0 and will make strict Peppol access-point parsers reject
+// the document. The surrogate alternatives are pair-aware so valid surrogate pairs
+// (e.g. emoji) are left untouched.
+const XML_ILLEGAL_RE =
+  /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g;
+
 function esc(v) {
   return String(v)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+    .replace(/"/g, '&quot;')
+    .replace(XML_ILLEGAL_RE, '');
 }
 
 function round2(n) {
@@ -67,6 +75,35 @@ function round2(n) {
 
 function money(n) {
   return round2(n).toFixed(2);
+}
+
+function round4(n) {
+  return Math.round((n + Number.EPSILON) * 10000) / 10000;
+}
+
+/**
+ * Format a quantity as an xs:decimal-safe string: no scientific notation.
+ * Integers render as-is; non-integers use a fixed-point expansion with
+ * trailing zeros trimmed. Magnitudes >= 1e21 can't be represented without
+ * falling back to exponential notation, so they're rejected instead.
+ */
+function formatQuantity(n) {
+  if (!Number.isFinite(n)) throw new Error('quantity is not a finite number');
+  if (Math.abs(n) >= 1e21) throw new Error('quantity magnitude is too large to represent as xs:decimal');
+  if (Number.isInteger(n)) return String(n);
+  return n.toFixed(10).replace(/0+$/, '').replace(/\.$/, '');
+}
+
+/**
+ * Format a unit price with up to 4 decimal places (trailing zeros trimmed,
+ * minimum 2 decimals) so sub-cent unit prices survive the EN 16931
+ * price x quantity = lineExtensionAmount validation.
+ */
+function price(n) {
+  let s = round4(n).toFixed(4).replace(/0+$/, '');
+  if (s.endsWith('.')) return s + '00';
+  const decimals = s.split('.')[1].length;
+  return decimals < 2 ? s + '0'.repeat(2 - decimals) : s;
 }
 
 function addressXml(a) {
@@ -129,11 +166,19 @@ export function summarize(inv) {
   if (!inv || !Array.isArray(inv.lines) || inv.lines.length === 0) {
     throw new Error('at least one line is required');
   }
-  const lines = inv.lines.map((l) => ({
-    ...l,
-    lineAmount: round2(Number(l.quantity) * Number(l.unitPrice)),
-    vat: Number(l.vatPercent),
-  }));
+  const lines = inv.lines.map((l, i) => {
+    const quantity = Number(l.quantity);
+    const unitPrice = Number(l.unitPrice);
+    const vatPercent = Number(l.vatPercent);
+    if (!Number.isFinite(quantity)) throw new Error(`line ${i}: quantity is not a finite number`);
+    if (!Number.isFinite(unitPrice)) throw new Error(`line ${i}: unitPrice is not a finite number`);
+    if (!Number.isFinite(vatPercent)) throw new Error(`line ${i}: vatPercent is not a finite number`);
+    return {
+      ...l,
+      lineAmount: round2(quantity * unitPrice),
+      vat: vatPercent,
+    };
+  });
   const net = round2(lines.reduce((s, l) => s + l.lineAmount, 0));
   const groups = new Map();
   for (const l of lines) {
@@ -190,7 +235,7 @@ export function buildInvoice(inv) {
       return (
         '\n  <cac:InvoiceLine>' +
         `\n    <cbc:ID>${i + 1}</cbc:ID>` +
-        `\n    <cbc:InvoicedQuantity unitCode="${unitCode}">${Number(l.quantity)}</cbc:InvoicedQuantity>` +
+        `\n    <cbc:InvoicedQuantity unitCode="${unitCode}">${formatQuantity(Number(l.quantity))}</cbc:InvoicedQuantity>` +
         `\n    <cbc:LineExtensionAmount currencyID="${currency}">${money(l.lineAmount)}</cbc:LineExtensionAmount>` +
         '\n    <cac:Item>' +
         `\n      <cbc:Name>${esc(l.name)}</cbc:Name>` +
@@ -200,7 +245,7 @@ export function buildInvoice(inv) {
         '\n        <cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme>' +
         '\n      </cac:ClassifiedTaxCategory>' +
         '\n    </cac:Item>' +
-        `\n    <cac:Price><cbc:PriceAmount currencyID="${currency}">${money(l.unitPrice)}</cbc:PriceAmount></cac:Price>` +
+        `\n    <cac:Price><cbc:PriceAmount currencyID="${currency}">${price(Number(l.unitPrice))}</cbc:PriceAmount></cac:Price>` +
         '\n  </cac:InvoiceLine>'
       );
     })

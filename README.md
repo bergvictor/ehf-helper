@@ -6,7 +6,9 @@ Turn a simple invoice JSON into **Peppol BIS Billing 3.0 (EN 16931 / EHF)** UBL 
 e-invoice format Norwegian businesses must support ahead of the 2027 mandates. Zero
 dependencies, single file, runs anywhere Node 18+ runs.
 
-> Built and maintained by [VImplement](https://www.vimplement.com) — AI, data og operativ software for norske SMB-er.
+> Built and maintained by [VImplement](https://www.vimplement.com/?utm_source=github&utm_medium=readme&utm_campaign=ehf_helper) — AI, data og operativ programvare for norske SMB-er.
+
+Need this in an actual invoice flow? [Book a 20–30 minute call](https://www.vimplement.com/book?utm_source=github&utm_medium=readme&utm_campaign=ehf_helper).
 
 ## Why
 
@@ -34,10 +36,9 @@ const invoice = {
   buyerReference: 'PO-2026-0042', // BT-10 — required by Peppol BIS 3.0
   currency: 'NOK',
   supplier: {
-    name: 'VImplement',
-    orgNo: '934134176',
-    vatNo: 'NO934134176MVA',
-    address: { street: 'Moltke Moes vei 14', city: 'Oslo', postalZone: '0851', country: 'NO' },
+    name: 'Eksempel Leverandør AS',
+    orgNo: '987654321',
+    address: { street: 'Eksempelveien 1', city: 'Oslo', postalZone: '0150', country: 'NO' },
   },
   customer: {
     name: 'Kunde AS',
