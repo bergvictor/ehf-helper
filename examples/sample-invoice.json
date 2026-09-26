@@ -1,0 +1,46 @@
+{
+  "invoiceNumber": "2026-001",
+  "issueDate": "2026-06-07",
+  "dueDate": "2026-06-21",
+  "buyerReference": "PO-2026-0042",
+  "currency": "NOK",
+  "supplier": {
+    "name": "Eksempel Leverandør AS",
+    "orgNo": "987654321",
+    "vatNo": "NO987654321MVA",
+    "address": {
+      "street": "Eksempelveien 1",
+      "city": "Oslo",
+      "postalZone": "0150",
+      "country": "NO"
+    }
+  },
+  "customer": {
+    "name": "Kunde AS",
+    "orgNo": "999888777",
+    "address": {
+      "city": "Bergen",
+      "postalZone": "5003",
+      "country": "NO"
+    }
+  },
+  "payment": {
+    "account": "86011117947",
+    "meansCode": 30,
+    "kid": "0123456789012"
+  },
+  "lines": [
+    {
+      "name": "Power BI dashboard",
+      "quantity": 1,
+      "unitPrice": 20000,
+      "vatPercent": 25
+    },
+    {
+      "name": "Rådgivning (timer)",
+      "quantity": 10,
+      "unitPrice": 1500,
+      "vatPercent": 25
+    }
+  ]
+}
